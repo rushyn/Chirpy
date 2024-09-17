@@ -27,9 +27,10 @@ func main() {
 	mux := http.NewServeMux()
 	//mux.Handle("/app/",  http.StripPrefix("/app/", http.FileServer(http.Dir("."))))
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir(".")))))
-	mux.HandleFunc("GET /healthz", healthz)
-	mux.HandleFunc("GET /metrics", metrics)
-	mux.HandleFunc("/reset", reset)
+	mux.HandleFunc("GET /api/healthz", healthz)
+	mux.HandleFunc("GET /admin/metrics", metrics)
+	mux.HandleFunc("/api/reset", reset)
+	mux.HandleFunc("POST /api/validate_chirp", validate_chirp)
 
 
 	svr := &http.Server{
@@ -50,10 +51,19 @@ func healthz(w http.ResponseWriter, req *http.Request) {
 func metrics(w http.ResponseWriter, req *http.Request) {
 	w.Header().Add("Content-Type:", "text/plain; charset=utf-8")
 	w.WriteHeader(200)
-	w.Write([]byte(fmt.Sprintf("Hits: %d", apiCfg.fileserverHits)))	
+	w.Write([]byte(fmt.Sprintf(	`<html>
+
+<body>
+	<h1>Welcome, Chirpy Admin</h1>
+	<p>Chirpy has been visited %d times!</p>
+</body>
+
+</html>`, 
+apiCfg.fileserverHits)))	
 }
 
 func reset(w http.ResponseWriter, req *http.Request) {
 	apiCfg.fileserverHits = 0
 	w.WriteHeader(200)
 }
+
