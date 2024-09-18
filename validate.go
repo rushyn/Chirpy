@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -65,13 +66,19 @@ func respondWithJSON(w http.ResponseWriter, code int, p payload) {
 		Cleaned_body: p.message(),
 	}
 
-	data, err := json.Marshal(chirpCleaned)
+	chirp, err := db.CreateChirp(chirpCleaned.message())
+	if err != nil{
+		fmt.Println(err)
+	}
+
+	data, err := json.Marshal(chirp)
 	if err != nil {
 		log.Printf("Error marshalling JSON: %s", err)
 		w.WriteHeader(500)
 		return
 	}
-
+	
+	
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	w.Write(data)
@@ -92,7 +99,7 @@ func validate_chirp(w http.ResponseWriter, req *http.Request) {
 		respondWithError(w, 400, "Chirp is too long")
 		return
 	}
-
-	respondWithJSON(w, 200, chirp)
+	
+	respondWithJSON(w, 201, chirp)
 
 }
