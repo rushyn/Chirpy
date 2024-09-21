@@ -74,7 +74,7 @@ func main() {
 	mux.HandleFunc("GET /admin/metrics", metrics)
 	mux.HandleFunc("/api/reset", reset)
 	mux.HandleFunc("POST /api/chirps", validate_chirp)
-	mux.HandleFunc("GET /api/chirps", get_chirps)
+	mux.HandleFunc("GET /api/{chirps}/", get_chirps)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", get_chirpById)
 	mux.HandleFunc("DELETE /api/chirps/{chirpID}", delete_chirpById)
 	mux.HandleFunc("POST /api/users", validate_users)
@@ -120,7 +120,7 @@ func reset(w http.ResponseWriter, req *http.Request) {
 }
 
 func get_chirpById(w http.ResponseWriter, req *http.Request) {
-	chirpList, err := db.GetChirps()
+	chirpList, err := db.GetChirps(0)
 	if err != nil{
 		log.Fatal(err)
 	}
@@ -146,11 +146,27 @@ func get_chirpById(w http.ResponseWriter, req *http.Request) {
 
 func get_chirps(w http.ResponseWriter, req *http.Request) {
 
-	chirpList, err := db.GetChirps()
+	authorID, err := strconv.Atoi(req.URL.Query().Get("author_id"))
+	if err != nil{
+		authorID = 0
+		log.Println(err)
+	}
+	
+	sortOrder := req.URL.Query().Get("sort")
+
+	chirpList, err := db.GetChirps(authorID)
 	if err != nil{
 		log.Fatal(err)
 	}
-	sort.Slice(chirpList, func(i, j int) bool {return chirpList[i].ID < chirpList[j].ID})
+
+
+	if sortOrder == "asc" {
+		sort.Slice(chirpList, func(i, j int) bool {return chirpList[i].ID < chirpList[j].ID})
+	}else{
+		sort.Slice(chirpList, func(i, j int) bool {return chirpList[i].ID > chirpList[j].ID})
+	}
+
+
 
 	data, err := json.Marshal(chirpList)
 	if err != nil{

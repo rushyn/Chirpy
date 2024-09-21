@@ -119,14 +119,16 @@ func (db *DB) CreateUser(email, password string) (User, error){
 	return user, nil
 }
 
-func (db *DB) GetChirps() ([]Chirp, error){
+func (db *DB) GetChirps(aurthorID int) ([]Chirp, error){
 	dbs, err := db.loadDB()
 	if err != nil {
 		log.Fatal(err)
 	}
 	chirps := []Chirp{}
-	for i := range dbs.Chirps{
-		chirps = append(chirps, dbs.Chirps[i])
+	for k := range dbs.Chirps{
+		if dbs.Chirps[k].Author_ID == aurthorID || aurthorID == 0 {
+			chirps = append(chirps, dbs.Chirps[k])
+		}
 	}
 	return chirps, nil
 }
