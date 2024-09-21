@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,12 +9,18 @@ import (
 	"sort"
 	"strconv"
 
+	"encoding/base64"
+
+	"github.com/joho/godotenv"
 	"github.com/rushyn/Chirpy/internal/database"
 )
 
 
+
+
 type apiConfig struct {
 	fileserverHits int
+	jwtSecret []byte
 }
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
@@ -30,26 +35,35 @@ var apiCfg = apiConfig{
 	fileserverHits: 0,
 }
 
-var db, _ = database.NewDB("database.json")
 
+
+
+
+
+
+var db, _ = database.NewDB("database.json")
 
 
 func main() {
 
-	dbg := flag.Bool("debug", false, "Enable debug mode")
-	flag.Parse()
-	if *dbg{
-		fmt.Println("removing database.json")
-		err := os.Remove("database.json") 
-		if err != nil { 
-			log.Fatal(err) 
-		} 
+
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Println(err)
+		log.Fatal("Error loading .env file")
 	}
 
-	
+	data, err := base64.StdEncoding.DecodeString(os.Getenv("JWT_SECRET"))
+	if err != nil {
+		fmt.Println("error:", err)
+		return
+	}
+
+	apiCfg.jwtSecret = data
+
+
 	const port = "8080"
 	mux := http.NewServeMux()
-	//mux.Handle("/app/",  http.StripPrefix("/app/", http.FileServer(http.Dir("."))))
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir(".")))))
 	mux.HandleFunc("GET /api/healthz", healthz)
 	mux.HandleFunc("GET /admin/metrics", metrics)
@@ -58,7 +72,10 @@ func main() {
 	mux.HandleFunc("GET /api/chirps", get_chirps)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", get_chirpById)
 	mux.HandleFunc("POST /api/users", validate_users)
-	
+	mux.HandleFunc("POST /api/login", validate_login)
+	mux.HandleFunc("PUT /api/users", update_user)
+	mux.HandleFunc("POST /api/refresh", refresh)
+	mux.HandleFunc("POST /api/revoke", revoke)
 
 
 	svr := &http.Server{

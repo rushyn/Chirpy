@@ -2,21 +2,25 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 )
 
-type email struct{
+type Email struct{
+	Password string `json:"password"`
 	Email string `json:"email"`
 }
 
+type userConfirm struct{
+	ID int `json:"id"`
+	Email string `json:"email"`
+}
 
 
 func validate_users(w http.ResponseWriter, req *http.Request) {
 
 	decoder := json.NewDecoder(req.Body)
-	email := email{}
+	email := Email{}
 	err := decoder.Decode(&email)
 	if err != nil {
 		log.Printf("Error decoding parameters: %s", err)
@@ -24,12 +28,19 @@ func validate_users(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	user, err := db.CreateUser(email.Email)
+	user, err := db.CreateUser(email.Email, email.Password)
 	if err != nil{
-		fmt.Println(err)
+		log.Printf("%s\n", err)
+		w.WriteHeader(500)
+		return
 	}
 
-	data, err := json.Marshal(user)
+	newUser := userConfirm{
+		ID: user.ID,
+		Email: user.Email,
+	}
+
+	data, err := json.Marshal(newUser)
 	if err != nil {
 		log.Printf("Error marshalling JSON: %s", err)
 		w.WriteHeader(500)
