@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -22,17 +21,11 @@ type Clames struct{
 
 func update_user(w http.ResponseWriter, req *http.Request) {
 
-	tokenStr := strings.TrimPrefix(req.Header.Get("Authorization"), "Bearer ")
-
-	token, err := jwt.ParseWithClaims(tokenStr, &Clames{}, func(token *jwt.Token) (interface{}, error) {
-		return apiCfg.jwtSecret, nil
-	})
-	if err != nil {
-		w.WriteHeader(401)
+	token, err := validate_access_token(w, req)
+	if err != nil{
 		return
-	} 
+	}
 
-	
 	RefreshToken, err := token.Claims.GetSubject()
 	if err != nil {
 		log.Printf("Error getting RefreshToken from token: %s", err)

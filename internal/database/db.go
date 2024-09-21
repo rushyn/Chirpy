@@ -20,6 +20,7 @@ type DB struct {
 
 type Chirp struct{
 	ID int `json:"id"`
+	Author_ID int `json:"author_id"`
 	Body string `json:"body"`
 }
 
@@ -63,19 +64,27 @@ func NewDB(path string) (*DB, error){
 	return &db, nil
 }
 
-func (db *DB) CreateChirp(body string) (Chirp, error){
+func (db *DB) CreateChirp(body, refreshToken string) (Chirp, error){
 	dbs, err := db.loadDB()
 	if err != nil {
 		log.Fatal(err)
 	}
-	chirp := Chirp{
-		ID : len(dbs.Chirps) + 1,
-		Body: body,
-	}
-	dbs.Chirps[len(dbs.Chirps) + 1] = chirp
-	db.writeDB(dbs)
 
-	return chirp, nil
+
+	for _, user := range dbs.Users{
+		if user.RefreshToken == refreshToken{
+			chirp := Chirp{
+				ID : (len(dbs.Chirps) + 1),
+				Author_ID: user.ID,
+				Body: body,
+			}
+			dbs.Chirps[len(dbs.Chirps) + 1] = chirp
+			db.writeDB(dbs)
+			return chirp, nil
+		}
+	}
+
+	return Chirp{}, errors.New("User Error")
 }
 
 func (db *DB) CreateUser(email, password string) (User, error){
@@ -109,7 +118,6 @@ func (db *DB) CreateUser(email, password string) (User, error){
 }
 
 
-
 func (db *DB) GetChirps() ([]Chirp, error){
 	dbs, err := db.loadDB()
 	if err != nil {
@@ -121,6 +129,7 @@ func (db *DB) GetChirps() ([]Chirp, error){
 	}
 	return chirps, nil
 }
+
 
 func (db *DB) GetUser(email string) (User, error){
 	dbs, err := db.loadDB()
@@ -236,10 +245,7 @@ func (db *DB) AuthorizNewAccessToken(refreshToken string) bool{
 	if len(dbs.Users) != 0{
 		for _, user := range dbs.Users{
 			if user.RefreshToken == refreshToken{
-				if user.ExpirerAt.After(time.Now()){
-					return true
-				}
-					return false
+				return user.ExpirerAt.After(time.Now())
 			}
 		}
 	}
@@ -267,3 +273,38 @@ func (db *DB) DeauthorizRefreshToken(refreshToken string) bool{
 	return false
 }
 
+func (db *DB) Delete_Chirp(refreshToken string, chirpID int) bool{
+	dbs, err := db.loadDB()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var userID int = 0
+
+	for _, user := range dbs.Users{
+		if user.RefreshToken == refreshToken{
+			userID = user.ID
+			break
+		}
+	}
+
+	if userID == 0{
+		return false
+	}
+
+
+	for i := range dbs.Chirps{
+		if dbs.Chirps[i].ID == chirpID{
+			if dbs.Chirps[i].Author_ID == userID {
+				delete(dbs.Chirps, i)
+				db.writeDB(dbs)
+				return true
+			}else{
+				return false
+			}
+			
+		}
+	}
+
+	return false
+}

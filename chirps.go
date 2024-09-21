@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 var profanes = []string{"kerfuffle", "sharbert", "fornax"}
@@ -61,15 +63,19 @@ func respondWithError(w http.ResponseWriter, code int, msg string) {
 	w.Write(data)
 }
 
-func respondWithJSON(w http.ResponseWriter, code int, p payload) {
+func respondWithJSON(w http.ResponseWriter, code int, p payload, token jwt.Token) {
 	chirpCleaned := chirpPOSTcleaned{
 		Cleaned_body: p.message(),
 	}
+	
+	refreshToken, _ := token.Claims.GetSubject()
 
-	chirp, err := db.CreateChirp(chirpCleaned.message())
+	
+	chirp, err := db.CreateChirp(chirpCleaned.message(), refreshToken)
 	if err != nil{
 		fmt.Println(err)
 	}
+
 
 	data, err := json.Marshal(chirp)
 	if err != nil {
@@ -86,9 +92,14 @@ func respondWithJSON(w http.ResponseWriter, code int, p payload) {
 
 func validate_chirp(w http.ResponseWriter, req *http.Request) {
 
+	token, err := validate_access_token(w, req)
+	if err != nil{
+		return
+	}
+
 	decoder := json.NewDecoder(req.Body)
 	var chirp = chirpPOST{}
-	err := decoder.Decode(&chirp)
+	err = decoder.Decode(&chirp)
 	if err != nil {
 		log.Printf("Error decoding parameters: %s", err)
 		respondWithError(w, 500, "Something went wrong")
@@ -100,6 +111,8 @@ func validate_chirp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	
-	respondWithJSON(w, 201, chirp)
+	
+	respondWithJSON(w, 201, chirp, token)
 
 }
+

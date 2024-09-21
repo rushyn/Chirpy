@@ -2,15 +2,18 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"sort"
 	"strconv"
+	"strings"
 
 	"encoding/base64"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/joho/godotenv"
 	"github.com/rushyn/Chirpy/internal/database"
 )
@@ -71,6 +74,7 @@ func main() {
 	mux.HandleFunc("POST /api/chirps", validate_chirp)
 	mux.HandleFunc("GET /api/chirps", get_chirps)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", get_chirpById)
+	mux.HandleFunc("DELETE /api/chirps/{chirpID}", delete_chirpById)
 	mux.HandleFunc("POST /api/users", validate_users)
 	mux.HandleFunc("POST /api/login", validate_login)
 	mux.HandleFunc("PUT /api/users", update_user)
@@ -138,6 +142,7 @@ func get_chirpById(w http.ResponseWriter, req *http.Request) {
 
 
 func get_chirps(w http.ResponseWriter, req *http.Request) {
+
 	chirpList, err := db.GetChirps()
 	if err != nil{
 		log.Fatal(err)
@@ -152,4 +157,48 @@ func get_chirps(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 	w.Write(data)	
+}
+
+
+
+func validate_access_token(w http.ResponseWriter, req *http.Request) (jwt.Token, error){
+	tokenStr := strings.TrimPrefix(req.Header.Get("Authorization"), "Bearer ")
+
+	token, err := jwt.ParseWithClaims(tokenStr, &Clames{}, func(token *jwt.Token) (interface{}, error) {
+		return apiCfg.jwtSecret, nil
+	})
+	if err != nil {
+		w.WriteHeader(401)
+		return *token, errors.New("token not valid")
+	}
+
+	return *token, nil
+}
+
+
+func delete_chirpById(w http.ResponseWriter, req *http.Request) {
+
+	token, err := validate_access_token(w, req)
+	if err != nil{
+		return
+	}
+
+	RefreshToken, err := token.Claims.GetSubject()
+	if err != nil {
+		log.Printf("Error getting RefreshToken from token: %s", err)
+		w.WriteHeader(500)
+		return
+	}
+
+	chirpID, _ := strconv.Atoi(req.PathValue("chirpID"))
+
+	if db.Delete_Chirp(RefreshToken, chirpID){
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(204)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
 }
