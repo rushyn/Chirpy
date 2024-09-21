@@ -35,6 +35,7 @@ type User struct {
 	Password []byte `json:"password"`
 	RefreshToken string `json:"refresh_token"`
 	ExpirerAt time.Time `json:"expirerat"`
+	Is_Chirpy_Red bool `json:"is_chirpy_red"`
 }
 
 
@@ -110,13 +111,13 @@ func (db *DB) CreateUser(email, password string) (User, error){
 		ID : len(dbs.Users) + 1,
 		Email: email,
 		Password: hashPass,
+		Is_Chirpy_Red: false,
 	}
 	dbs.Users[len(dbs.Users) + 1] = user
 	db.writeDB(dbs)
 
 	return user, nil
 }
-
 
 func (db *DB) GetChirps() ([]Chirp, error){
 	dbs, err := db.loadDB()
@@ -129,7 +130,6 @@ func (db *DB) GetChirps() ([]Chirp, error){
 	}
 	return chirps, nil
 }
-
 
 func (db *DB) GetUser(email string) (User, error){
 	dbs, err := db.loadDB()
@@ -186,10 +186,7 @@ func (db *DB) writeDB(dbStructure DBStructure) error {
 	return nil
 }
 
-
-
-
-func (db *DB) UpdateUser(newEmail, newPassword, RefreshToken string) (User, error){
+func (db *DB) UpdateUserCredentials(newEmail, newPassword, RefreshToken string) (User, error){
 	dbs, err := db.loadDB()
 	if err != nil {
 		log.Fatal(err)
@@ -213,7 +210,6 @@ func (db *DB) UpdateUser(newEmail, newPassword, RefreshToken string) (User, erro
 
 	return User{}, errors.New("something Bad Happend user not found in databse")
 }
-
 
 func (db *DB) UpdateRefreshToken(email, refreshToken string) (User, error){
 	dbs, err := db.loadDB()
@@ -306,5 +302,23 @@ func (db *DB) Delete_Chirp(refreshToken string, chirpID int) bool{
 		}
 	}
 
+	return false
+}
+
+
+func (db *DB) SetUserRed(userID int) bool {
+	dbs, err := db.loadDB()
+	if err != nil {
+		log.Fatal(err)
+	}
+	
+	for k, user := range dbs.Users{
+		if user.ID == userID{
+			user.Is_Chirpy_Red = true
+			dbs.Users[k] = user
+			db.writeDB(dbs)
+			return true
+		}
+	}
 	return false
 }

@@ -24,6 +24,7 @@ import (
 type apiConfig struct {
 	fileserverHits int
 	jwtSecret []byte
+	polka_key string
 }
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
@@ -63,6 +64,7 @@ func main() {
 	}
 
 	apiCfg.jwtSecret = data
+	apiCfg.polka_key = os.Getenv("POLKA_KEY")
 
 
 	const port = "8080"
@@ -80,6 +82,7 @@ func main() {
 	mux.HandleFunc("PUT /api/users", update_user)
 	mux.HandleFunc("POST /api/refresh", refresh)
 	mux.HandleFunc("POST /api/revoke", revoke)
+	mux.HandleFunc("POST /api/polka/webhooks", chirpy_event)
 
 
 	svr := &http.Server{

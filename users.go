@@ -14,6 +14,7 @@ type Email struct{
 type userConfirm struct{
 	ID int `json:"id"`
 	Email string `json:"email"`
+	Is_Chirpy_Red bool `json:"is_chirpy_red"`
 }
 
 
@@ -38,6 +39,7 @@ func validate_users(w http.ResponseWriter, req *http.Request) {
 	newUser := userConfirm{
 		ID: user.ID,
 		Email: user.Email,
+		Is_Chirpy_Red: user.Is_Chirpy_Red,
 	}
 
 	data, err := json.Marshal(newUser)

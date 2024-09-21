@@ -43,7 +43,7 @@ func update_user(w http.ResponseWriter, req *http.Request) {
 	}
 
 
-	user, err := db.UpdateUser(userUpdate.Email, userUpdate.Password, RefreshToken)
+	user, err := db.UpdateUserCredentials(userUpdate.Email, userUpdate.Password, RefreshToken)
 	if err != nil{
 		log.Printf("%s\n", err)
 		w.WriteHeader(500)

@@ -23,6 +23,7 @@ type LogInToken struct{
 	Email string `json:"email"`
 	Token string `json:"token"`
 	RefreshToken string `json:"refresh_token"`
+	Is_Chirpy_Red bool `json:"is_chirpy_red"`
 }
 
 func validate_login(w http.ResponseWriter, req *http.Request) {
@@ -72,6 +73,7 @@ func validate_login(w http.ResponseWriter, req *http.Request) {
 		Email: user.Email,
 		Token: tokenSig,
 		RefreshToken: refreshTokenHex,
+		Is_Chirpy_Red: user.Is_Chirpy_Red,
 	}
 
 	data, err := json.Marshal(logInConfirmToken)
